@@ -67,7 +67,7 @@ def get_playlist_tracks(playlist_url: str, client_id: str, client_secret: str) -
     headers = {"Authorization": f"Bearer {token}"}
 
     tracks = []
-    url = f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/tracks"
+    url = f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/items"
     params = {
         "limit": 100,
         "fields": "items(track(name,artists(name),external_ids,duration_ms,id,is_local)),next",
