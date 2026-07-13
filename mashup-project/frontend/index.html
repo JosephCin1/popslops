@@ -4,7 +4,7 @@
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Seam — turn a playlist into one continuous mix</title>
+<title>PopSlop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -258,8 +258,8 @@
  
   <!-- ============ VIEW 1: UPLOAD ============ -->
   <div class="view active" id="view-upload">
-    <h1>One playlist. One continuous mix.</h1>
-    <p class="sub">Paste a public Spotify playlist link. We'll pull the catchiest available clip of every track and stitch them into a single seamless file.</p>
+    <h1>Pop Slop</h1>
+    <p class="sub">Paste a public Spotify playlist link. Turn it into your favorite slop aoife :3</p>
  
     <div class="seam state-idle" id="seam-graphic">
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
@@ -284,7 +284,7 @@
     </div>
  
     <p class="hint" id="estimate-hint"></p>
-    <button id="connect-btn">Connect Spotify</button>
+    <button id="connect-btn">Connect Your Spotify Account</button>
     <button id="submit-btn" style="display:none; margin-top:10px;">Build the mix</button>
     <p class="hint" id="connected-hint" style="display:none; text-align:center; margin-top:10px;">✓ Connected to Spotify</p>
   </div>
@@ -311,7 +311,7 @@
   <div class="view" id="view-done">
     <div class="done-icon">✓</div>
     <h1>Your mix is ready.</h1>
-    <p class="sub" id="done-sub">Every track's best available moment, faded together into one file.</p>
+    <p class="sub" id="done-sub">Here's ur popslop.</p>
  
     <a href="#" class="download-btn" id="download-link" download>Download MP3</a>
     <button class="secondary-btn" id="restart-btn">Build another mix</button>
@@ -405,8 +405,8 @@
  
   // Rough per-track time budget used only to drive the smooth progress bar
   // animation - not sent anywhere, just a client-side feel/estimate.
-  const SECONDS_PER_TRACK_ESTIMATE = 2.2;
-  const STITCH_OVERHEAD_ESTIMATE = 4;
+  const SECONDS_PER_TRACK_ESTIMATE = 8;
+  const STITCH_OVERHEAD_ESTIMATE = 5;
  
   let pollTimer = null;
   let progressAnimTimer = null;
@@ -433,7 +433,7 @@
       // 99% on its own - only an actual "done" status is allowed to hit 100.
       const target = Math.min(Math.max(timeBasedPct, latestBackendProgress), 99);
       if (target > currentDisplayedProgress) {
-        currentDisplayedProgress += Math.min(target - currentDisplayedProgress, 1.5);
+        currentDisplayedProgress += Math.min(target - currentDisplayedProgress, .7);
       }
       document.getElementById("progress-fill").style.width = `${currentDisplayedProgress}%`;
     }, 150);
