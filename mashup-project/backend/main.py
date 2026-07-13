@@ -16,12 +16,17 @@ import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
-from spotify_client import get_playlist_tracks, SpotifyError
+from spotify_client import (
+    get_playlist_tracks_with_user_token,
+    build_authorize_url,
+    exchange_code_for_token,
+    SpotifyError,
+)
 from audio_sources import find_preview_clip, download_clip
 from stitcher import stitch_clips, StitchError
 
@@ -29,9 +34,18 @@ load_dotenv()
 
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
+# e.g. https://popslop.onrender.com/api/callback - must exactly match what's
+# registered in the Spotify dashboard.
+REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "")
+# e.g. https://popslop.netlify.app - where we send the browser back to once login finishes.
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 STORAGE_DIR = Path(os.getenv("JOB_STORAGE_DIR", "./job_storage"))
 FADE_DURATION = float(os.getenv("FADE_DURATION", "0.5"))
 RETENTION_HOURS = float(os.getenv("FILE_RETENTION_HOURS", "24"))
+
+# In-memory session store: session_id -> {access_token, refresh_token, expires_at}
+# Same tradeoffs as JOBS below - fine for one process, swap for Redis if you scale out.
+SESSIONS: dict[str, dict] = {}
 
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -52,6 +66,7 @@ JOBS: dict[str, dict] = {}
 
 class JobRequest(BaseModel):
     playlist_url: str
+    session_id: str  # obtained from the /api/login -> /api/callback flow
 
 
 class JobStatus(BaseModel):
@@ -73,7 +88,7 @@ def _update(job_id: str, **fields):
     JOBS[job_id].update(fields)
 
 
-def _run_job(job_id: str, playlist_url: str):
+def _run_job(job_id: str, playlist_url: str, access_token: str):
     job_dir = _job_dir(job_id)
     clips_dir = job_dir / "clips"
     clips_dir.mkdir(parents=True, exist_ok=True)
@@ -81,7 +96,7 @@ def _run_job(job_id: str, playlist_url: str):
     try:
         # --- Step 1: playlist -> track metadata ---
         _update(job_id, status="fetching_playlist", progress=5, message="Reading playlist from Spotify...")
-        tracks = get_playlist_tracks(playlist_url, CLIENT_ID, CLIENT_SECRET)
+        tracks = get_playlist_tracks_with_user_token(playlist_url, access_token)
         _update(job_id, total_tracks=len(tracks))
 
         # --- Step 2: track metadata -> preview clips (Deezer, then iTunes) ---
@@ -140,10 +155,42 @@ def _run_job(job_id: str, playlist_url: str):
         _update(job_id, status="error", message=f"Unexpected error: {e}")
 
 
+@app.get("/api/login")
+def login():
+    if not CLIENT_ID or not REDIRECT_URI:
+        raise HTTPException(500, "Server is missing SPOTIFY_CLIENT_ID or SPOTIFY_REDIRECT_URI")
+
+    state = uuid.uuid4().hex
+    # Pre-register the pending session so the callback has somewhere to write to.
+    SESSIONS[state] = {"access_token": None}
+    authorize_url = build_authorize_url(
+        CLIENT_ID, REDIRECT_URI, state, scope="playlist-read-private playlist-read-collaborative"
+    )
+    return RedirectResponse(authorize_url)
+
+
+@app.get("/api/callback")
+def callback(code: str = Query(...), state: str = Query(...)):
+    if state not in SESSIONS:
+        raise HTTPException(400, "Unknown or expired login attempt")
+
+    try:
+        token_data = exchange_code_for_token(code, REDIRECT_URI, CLIENT_ID, CLIENT_SECRET)
+    except SpotifyError as e:
+        raise HTTPException(400, str(e))
+
+    SESSIONS[state] = token_data  # state doubles as the session_id from here on
+
+    if FRONTEND_URL:
+        return RedirectResponse(f"{FRONTEND_URL}?session_id={state}")
+    return {"session_id": state, "message": "Login successful. Pass this session_id to /api/jobs."}
+
+
 @app.post("/api/jobs", response_model=JobStatus)
 def create_job(req: JobRequest):
-    if not CLIENT_ID or not CLIENT_SECRET:
-        raise HTTPException(500, "Server is missing SPOTIFY_CLIENT_ID/SECRET - set them in .env")
+    session = SESSIONS.get(req.session_id)
+    if not session or not session.get("access_token"):
+        raise HTTPException(401, "Not logged in with Spotify (or session expired). Log in again.")
 
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = {
@@ -154,7 +201,9 @@ def create_job(req: JobRequest):
         "created_at": time.time(),
     }
 
-    thread = threading.Thread(target=_run_job, args=(job_id, req.playlist_url), daemon=True)
+    thread = threading.Thread(
+        target=_run_job, args=(job_id, req.playlist_url, session["access_token"]), daemon=True
+    )
     thread.start()
 
     return JOBS[job_id]
