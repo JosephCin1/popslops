@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<script>window.API_BASE_URL = "https://popslop.onrender.com";</script>
-
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -254,7 +252,9 @@
     <input type="text" id="playlist-url" placeholder="https://open.spotify.com/playlist/..." />
     <p class="hint">The playlist must be set to public in Spotify.</p>
 
-    <button id="submit-btn">Build the mix</button>
+    <button id="connect-btn">Connect Spotify</button>
+    <button id="submit-btn" style="display:none; margin-top:10px;">Build the mix</button>
+    <p class="hint" id="connected-hint" style="display:none; text-align:center; margin-top:10px;">✓ Connected to Spotify</p>
   </div>
 
   <!-- ============ VIEW 2: PROCESSING ============ -->
@@ -305,8 +305,37 @@
   }
 
   const submitBtn = document.getElementById("submit-btn");
+  const connectBtn = document.getElementById("connect-btn");
+  const connectedHint = document.getElementById("connected-hint");
   const urlInput = document.getElementById("playlist-url");
   const uploadError = document.getElementById("upload-error");
+
+  let sessionId = null;
+
+  // After Spotify login, /api/callback redirects here with ?session_id=...
+  (function checkForSessionInUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("session_id");
+    if (sid) {
+      sessionId = sid;
+      sessionStorage.setItem("seam_session_id", sid);
+      // Clean the URL so refreshing doesn't re-trigger this.
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      sessionId = sessionStorage.getItem("seam_session_id");
+    }
+    if (sessionId) markConnected();
+  })();
+
+  function markConnected() {
+    connectBtn.style.display = "none";
+    submitBtn.style.display = "block";
+    connectedHint.style.display = "block";
+  }
+
+  connectBtn.addEventListener("click", () => {
+    window.location.href = `${API_BASE}/api/login`;
+  });
 
   function showUploadError(msg) {
     uploadError.textContent = msg;
@@ -329,6 +358,10 @@
     const playlistUrl = urlInput.value.trim();
     clearUploadError();
 
+    if (!sessionId) {
+      showUploadError("Connect Spotify first.");
+      return;
+    }
     if (!playlistUrl) {
       showUploadError("Paste a playlist link first.");
       return;
@@ -339,11 +372,19 @@
       const resp = await fetch(`${API_BASE}/api/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playlist_url: playlistUrl }),
+        body: JSON.stringify({ playlist_url: playlistUrl, session_id: sessionId }),
       });
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
+        if (resp.status === 401) {
+          // Session expired - send them through login again.
+          sessionStorage.removeItem("seam_session_id");
+          sessionId = null;
+          connectBtn.style.display = "block";
+          submitBtn.style.display = "none";
+          connectedHint.style.display = "none";
+        }
         throw new Error(err.detail || `Server error (${resp.status})`);
       }
 
