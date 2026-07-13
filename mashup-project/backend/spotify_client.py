@@ -126,7 +126,7 @@ def _fetch_playlist_items(playlist_id: str, headers: dict) -> list[dict]:
     url = f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/items"
     params = {
         "limit": 100,
-        "fields": "items(track(name,artists(name),external_ids,duration_ms,id,is_local)),next",
+        "fields": "items(item(name,artists(name),external_ids,duration_ms,id,is_local)),next",
     }
  
     while url:
@@ -139,9 +139,9 @@ def _fetch_playlist_items(playlist_id: str, headers: dict) -> list[dict]:
             raise SpotifyError(f"Spotify API error ({resp.status_code}): {resp.text}")
  
         data = resp.json()
-        for item in data.get("items", []):
-            track = item.get("track")
-            if not track or track.get("is_local"):
+        for entry in data.get("items", []):
+            track = entry.get("item")
+            if not track or entry.get("is_local"):
                 continue
             isrc = (track.get("external_ids") or {}).get("isrc")
             artists = ", ".join(a["name"] for a in track.get("artists", []))
