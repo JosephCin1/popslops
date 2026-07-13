@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-<script>window.API_BASE_URL = "https://popslop.onrender.com";</script>
+  <script>window.API_BASE_URL = "https://popslop.onrender.com";</script>
 
-<head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Seam — turn a playlist into one continuous mix</title>
@@ -18,9 +17,9 @@
     --amber: #F2A544;
     --rose: #E8636B;
   }
-
+ 
   * { box-sizing: border-box; }
-
+ 
   body {
     margin: 0;
     min-height: 100vh;
@@ -32,7 +31,7 @@
     justify-content: center;
     padding: 24px;
   }
-
+ 
   .card {
     width: 100%;
     max-width: 560px;
@@ -43,7 +42,7 @@
     position: relative;
     overflow: hidden;
   }
-
+ 
   .eyebrow {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
@@ -52,7 +51,7 @@
     color: var(--amber);
     margin: 0 0 14px 0;
   }
-
+ 
   h1 {
     font-family: 'Fraunces', serif;
     font-weight: 500;
@@ -60,14 +59,14 @@
     line-height: 1.15;
     margin: 0 0 12px 0;
   }
-
+ 
   .sub {
     color: var(--paper-dim);
     font-size: 15px;
     line-height: 1.5;
     margin: 0 0 32px 0;
   }
-
+ 
   /* --- seam graphic: the signature element ------------------------- */
   .seam {
     height: 46px;
@@ -95,18 +94,18 @@
   .seam .bar:nth-child(odd) { animation-delay: 0.08s; }
   .seam .bar:nth-child(3n) { animation-delay: 0.16s; }
   .seam .bar:nth-child(4n) { animation-delay: 0.24s; }
-
+ 
   /* --- states -------------------------------------------------------- */
   .view { display: none; }
   .view.active { display: block; }
-
+ 
   label {
     display: block;
     font-size: 13px;
     color: var(--paper-dim);
     margin-bottom: 8px;
   }
-
+ 
   input[type="text"] {
     width: 100%;
     padding: 14px 16px;
@@ -122,13 +121,13 @@
     outline: none;
     border-color: var(--amber);
   }
-
+ 
   .hint {
     font-size: 12.5px;
     color: var(--paper-dim);
     margin-bottom: 24px;
   }
-
+ 
   button {
     width: 100%;
     padding: 15px;
@@ -145,7 +144,7 @@
   button:hover { opacity: 0.9; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
-
+ 
   .error-box {
     background: rgba(232, 99, 107, 0.12);
     border: 1px solid var(--rose);
@@ -157,14 +156,14 @@
     display: none;
   }
   .error-box.show { display: block; }
-
+ 
   .status-line {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     color: var(--paper-dim);
     margin-bottom: 6px;
   }
-
+ 
   .progress-track {
     height: 6px;
     background: var(--ink);
@@ -179,7 +178,27 @@
     width: 0%;
     transition: width 0.5s ease;
   }
-
+ 
+  .slider-row {
+    margin-bottom: 18px;
+  }
+  .slider-row label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--paper-dim);
+    margin-bottom: 8px;
+  }
+  .slider-row label span {
+    color: var(--amber);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--amber);
+    height: 4px;
+  }
+ 
   .unmatched-list {
     font-size: 12.5px;
     color: var(--paper-dim);
@@ -191,7 +210,7 @@
     max-height: 120px;
     overflow-y: auto;
   }
-
+ 
   .done-icon {
     width: 44px;
     height: 44px;
@@ -205,7 +224,7 @@
     font-size: 20px;
     color: var(--ink);
   }
-
+ 
   .download-btn {
     display: block;
     text-align: center;
@@ -217,7 +236,7 @@
     font-weight: 600;
     margin-bottom: 12px;
   }
-
+ 
   .secondary-btn {
     display: block;
     text-align: center;
@@ -233,87 +252,117 @@
 </style>
 </head>
 <body>
-
+ 
 <div class="card">
   <p class="eyebrow">Seam</p>
-
+ 
   <!-- ============ VIEW 1: UPLOAD ============ -->
   <div class="view active" id="view-upload">
     <h1>One playlist. One continuous mix.</h1>
     <p class="sub">Paste a public Spotify playlist link. We'll pull the catchiest available clip of every track and stitch them into a single seamless file.</p>
-
+ 
     <div class="seam state-idle" id="seam-graphic">
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
     </div>
-
+ 
     <div class="error-box" id="upload-error"></div>
-
+ 
     <label for="playlist-url">Spotify playlist link</label>
     <input type="text" id="playlist-url" placeholder="https://open.spotify.com/playlist/..." />
     <p class="hint">The playlist must be set to public in Spotify.</p>
-
+ 
+    <div class="slider-row">
+      <label for="clip-duration-input">Clip length per song: <span id="clip-duration-value">30s</span></label>
+      <input type="range" id="clip-duration-input" min="5" max="30" step="1" value="30" />
+    </div>
+ 
+    <div class="slider-row">
+      <label for="fade-duration-input">Crossfade length: <span id="fade-duration-value">0.5s</span></label>
+      <input type="range" id="fade-duration-input" min="0.2" max="3" step="0.1" value="0.5" />
+    </div>
+ 
+    <p class="hint" id="estimate-hint"></p>
     <button id="connect-btn">Connect Spotify</button>
     <button id="submit-btn" style="display:none; margin-top:10px;">Build the mix</button>
     <p class="hint" id="connected-hint" style="display:none; text-align:center; margin-top:10px;">✓ Connected to Spotify</p>
   </div>
-
+ 
   <!-- ============ VIEW 2: PROCESSING ============ -->
   <div class="view" id="view-processing">
     <h1>Stitching it together...</h1>
     <p class="sub" id="processing-sub">Reading your playlist.</p>
-
+ 
     <div class="seam state-processing"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
       <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-
+ 
     <div class="status-line" id="status-line">queued...</div>
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-
+    <p class="hint" id="processing-estimate-hint"></p>
+ 
     <div id="unmatched-wrap" style="display:none;">
       <div class="unmatched-list" id="unmatched-list"></div>
     </div>
   </div>
-
+ 
   <!-- ============ VIEW 3: DONE ============ -->
   <div class="view" id="view-done">
     <div class="done-icon">✓</div>
     <h1>Your mix is ready.</h1>
     <p class="sub" id="done-sub">Every track's best available moment, faded together into one file.</p>
-
+ 
     <a href="#" class="download-btn" id="download-link" download>Download MP3</a>
     <button class="secondary-btn" id="restart-btn">Build another mix</button>
-
+ 
     <div id="done-unmatched-wrap" style="display:none;">
       <div class="unmatched-list" id="done-unmatched-list"></div>
     </div>
   </div>
 </div>
-
+ 
 <script>
   // Point this at wherever your backend is actually running.
   const API_BASE = window.API_BASE_URL || "http://localhost:8000";
-
+ 
   const views = {
     upload: document.getElementById("view-upload"),
     processing: document.getElementById("view-processing"),
     done: document.getElementById("view-done"),
   };
-
+ 
   function showView(name) {
     Object.values(views).forEach(v => v.classList.remove("active"));
     views[name].classList.add("active");
   }
-
+ 
   const submitBtn = document.getElementById("submit-btn");
   const connectBtn = document.getElementById("connect-btn");
   const connectedHint = document.getElementById("connected-hint");
   const urlInput = document.getElementById("playlist-url");
   const uploadError = document.getElementById("upload-error");
-
+  const clipDurationInput = document.getElementById("clip-duration-input");
+  const fadeDurationInput = document.getElementById("fade-duration-input");
+  const clipDurationValue = document.getElementById("clip-duration-value");
+  const fadeDurationValue = document.getElementById("fade-duration-value");
+ 
+  clipDurationInput.addEventListener("input", () => {
+    clipDurationValue.textContent = `${clipDurationInput.value}s`;
+  });
+  fadeDurationInput.addEventListener("input", () => {
+    fadeDurationValue.textContent = `${parseFloat(fadeDurationInput.value).toFixed(1)}s`;
+  });
+ 
+  function formatDuration(sec) {
+    if (sec == null) return "";
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+ 
   let sessionId = null;
-
+ 
   // After Spotify login, /api/callback redirects here with ?session_id=...
   (function checkForSessionInUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -328,17 +377,17 @@
     }
     if (sessionId) markConnected();
   })();
-
+ 
   function markConnected() {
     connectBtn.style.display = "none";
     submitBtn.style.display = "block";
     connectedHint.style.display = "block";
   }
-
+ 
   connectBtn.addEventListener("click", () => {
     window.location.href = `${API_BASE}/api/login`;
   });
-
+ 
   function showUploadError(msg) {
     uploadError.textContent = msg;
     uploadError.classList.add("show");
@@ -346,20 +395,59 @@
   function clearUploadError() {
     uploadError.classList.remove("show");
   }
-
+ 
   const STATUS_LABELS = {
     queued: "Queued...",
     fetching_playlist: "Reading your playlist from Spotify...",
     fetching_clips: "Fetching preview clips from Deezer / iTunes...",
     stitching: "Crossfading and stitching the final file...",
   };
-
+ 
+  // Rough per-track time budget used only to drive the smooth progress bar
+  // animation - not sent anywhere, just a client-side feel/estimate.
+  const SECONDS_PER_TRACK_ESTIMATE = 2.2;
+  const STITCH_OVERHEAD_ESTIMATE = 4;
+ 
   let pollTimer = null;
-
+  let progressAnimTimer = null;
+  let jobStartTime = null;
+  let estimatedTotalSeconds = null;
+  let latestBackendProgress = 0;
+  let currentDisplayedProgress = 0;
+ 
+  function startSmoothProgress() {
+    jobStartTime = Date.now();
+    estimatedTotalSeconds = null;
+    latestBackendProgress = 0;
+    currentDisplayedProgress = 0;
+    clearInterval(progressAnimTimer);
+ 
+    progressAnimTimer = setInterval(() => {
+      let timeBasedPct = 0;
+      if (estimatedTotalSeconds) {
+        const elapsed = (Date.now() - jobStartTime) / 1000;
+        timeBasedPct = (elapsed / estimatedTotalSeconds) * 100;
+      }
+      // Move toward whichever signal is further along (real backend progress,
+      // or the time-based estimate), but never let the animated bar exceed
+      // 99% on its own - only an actual "done" status is allowed to hit 100.
+      const target = Math.min(Math.max(timeBasedPct, latestBackendProgress), 99);
+      if (target > currentDisplayedProgress) {
+        currentDisplayedProgress += Math.min(target - currentDisplayedProgress, 1.5);
+      }
+      document.getElementById("progress-fill").style.width = `${currentDisplayedProgress}%`;
+    }, 150);
+  }
+ 
+  function stopSmoothProgress(finalPct) {
+    clearInterval(progressAnimTimer);
+    document.getElementById("progress-fill").style.width = `${finalPct}%`;
+  }
+ 
   submitBtn.addEventListener("click", async () => {
     const playlistUrl = urlInput.value.trim();
     clearUploadError();
-
+ 
     if (!sessionId) {
       showUploadError("Connect Spotify first.");
       return;
@@ -368,15 +456,23 @@
       showUploadError("Paste a playlist link first.");
       return;
     }
-
+ 
+    const clipDuration = parseFloat(clipDurationInput.value);
+    const fadeDuration = parseFloat(fadeDurationInput.value);
+ 
     submitBtn.disabled = true;
     try {
       const resp = await fetch(`${API_BASE}/api/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playlist_url: playlistUrl, session_id: sessionId }),
+        body: JSON.stringify({
+          playlist_url: playlistUrl,
+          session_id: sessionId,
+          clip_duration: clipDuration,
+          fade_duration: fadeDuration,
+        }),
       });
-
+ 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         if (resp.status === 401) {
@@ -389,9 +485,11 @@
         }
         throw new Error(err.detail || `Server error (${resp.status})`);
       }
-
+ 
       const job = await resp.json();
       showView("processing");
+      document.getElementById("processing-estimate-hint").textContent = "";
+      startSmoothProgress();
       pollJob(job.job_id);
     } catch (e) {
       showUploadError(e.message || "Something went wrong submitting the playlist.");
@@ -399,7 +497,7 @@
       submitBtn.disabled = false;
     }
   });
-
+ 
   function pollJob(jobId) {
     clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
@@ -408,30 +506,44 @@
         if (!resp.ok) throw new Error("Lost track of this job.");
         const job = await resp.json();
         renderProgress(job);
-
+ 
         if (job.status === "done") {
           clearInterval(pollTimer);
+          stopSmoothProgress(100);
           renderDone(job, jobId);
         } else if (job.status === "error") {
           clearInterval(pollTimer);
+          clearInterval(progressAnimTimer);
           showView("upload");
           showUploadError(job.message || "The job failed.");
         }
       } catch (e) {
         clearInterval(pollTimer);
+        clearInterval(progressAnimTimer);
         showView("upload");
         showUploadError("Lost connection while checking job status.");
       }
     }, 1800);
   }
-
+ 
   function renderProgress(job) {
     document.getElementById("processing-sub").textContent =
       STATUS_LABELS[job.status] || "Working on it...";
     document.getElementById("status-line").textContent =
       job.message || "";
-    document.getElementById("progress-fill").style.width = `${job.progress || 0}%`;
-
+    latestBackendProgress = job.progress || 0;
+ 
+    // Once we know how many tracks are in the playlist, set a time budget for
+    // the smooth progress animation and show the estimated final mix length.
+    if (job.total_tracks && !estimatedTotalSeconds) {
+      estimatedTotalSeconds =
+        job.total_tracks * SECONDS_PER_TRACK_ESTIMATE + STITCH_OVERHEAD_ESTIMATE;
+    }
+    if (job.estimated_duration_sec) {
+      document.getElementById("processing-estimate-hint").textContent =
+        `Estimated mix length: ${formatDuration(job.estimated_duration_sec)}`;
+    }
+ 
     if (job.unmatched_tracks && job.unmatched_tracks.length > 0) {
       const wrap = document.getElementById("unmatched-wrap");
       const list = document.getElementById("unmatched-list");
@@ -439,17 +551,20 @@
       list.textContent = `Couldn't find a clip for: ${job.unmatched_tracks.join(", ")}`;
     }
   }
-
+ 
   function renderDone(job, jobId) {
     showView("done");
     const link = document.getElementById("download-link");
     link.href = `${API_BASE}${job.download_url}`;
-
+ 
     const matched = job.matched_tracks ?? "?";
     const total = job.total_tracks ?? "?";
+    const lengthNote = job.estimated_duration_sec
+      ? ` Final length: ~${formatDuration(job.estimated_duration_sec)}.`
+      : "";
     document.getElementById("done-sub").textContent =
-      `${matched} of ${total} tracks made it into the mix.`;
-
+      `${matched} of ${total} tracks made it into the mix.${lengthNote}`;
+ 
     if (job.unmatched_tracks && job.unmatched_tracks.length > 0) {
       const wrap = document.getElementById("done-unmatched-wrap");
       const list = document.getElementById("done-unmatched-list");
@@ -457,7 +572,7 @@
       list.textContent = `Skipped (no clip found): ${job.unmatched_tracks.join(", ")}`;
     }
   }
-
+ 
   document.getElementById("restart-btn").addEventListener("click", () => {
     urlInput.value = "";
     clearUploadError();
@@ -466,6 +581,6 @@
     showView("upload");
   });
 </script>
-
+ 
 </body>
 </html>
